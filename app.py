@@ -1,102 +1,108 @@
 import streamlit as st
 
-st.set_page_config(page_title="Emergência Pro - Checklist", layout="centered")
+st.set_page_config(page_title="Emergência Pro - Condicional", layout="centered")
 
-st.title("🏥 Registro Estruturado de Emergência")
+# --- ESTILIZAÇÃO PARA BOTÕES (LAYOUT DE GRID) ---
+st.markdown("""
+    <style>
+    div.stButton > button:first-child { width: 100%; border-radius: 5px; }
+    </style>
+""", unsafe_allow_html=True)
 
-# --- SEÇÃO 1: IDENTIFICAÇÃO (Texto Livre) ---
-with st.expander("🆔 Identificação", expanded=True):
+st.title("🏥 Admissão de Emergência Dinâmica")
+
+# --- 1. IDENTIFICAÇÃO E ORIGEM ---
+with st.container():
     nome = st.text_input("Nome do Paciente")
-    idade = st.number_input("Idade", min_value=0, max_value=120, step=1)
-    origem = st.selectbox("Origem do Paciente", ["Demanda Espontânea", "SAMU", "Bombeiros", "Transferência Inter-hospitalar", "Outro"])
+    idade = st.number_input("Idade", min_value=0, max_value=120)
+    origem = st.selectbox("Origem do Paciente", 
+                         ["Demanda Espontânea", "SAMU", "Bombeiros", "Vaga Zero", "Transferência"])
 
-# --- SEÇÃO 2: HDA COM CHECKLIST ---
-with st.expander("📝 História da Doença Atual (HDA)"):
-    tempo_inicio = st.select_slider("Tempo de início", options=["< 1h", "1-6h", "6-12h", "12-24h", "> 24h", "Crônico"])
-    
-    tipo_queixa = st.multiselect("Tipo de Queixa (Selecione)", 
-        ["Dor Torácica", "Dispneia", "Déficit Neurológico", "Dor Abdominal", "Trauma", "Síncope", "Febre", "Cefaleia"])
-    
-    caract_queixa = st.multiselect("Características/Sintomas (Checklist)",
-        ["Opressiva", "Pleurítica", "Irradiação para MMSS", "Sudorese associada", "Náuseas/Vômitos", 
-         "Piora ao esforço", "Início súbito", "Palpitações", "Cianose", "Uso de musculatura acessória"])
-    
-    hda_obs = st.text_input("Nota adicional HDA (opcional)")
+# --- 2. QUEIXA PRINCIPAL (BOTÕES CLICÁVEIS) ---
+st.subheader("Selecione a Queixa Principal")
+lista_queixas = [
+    "Dor torácica", "Dispneia", "Tosse", "Febre", "Dor abdominal", "Sangramento",
+    "Dor lombar", "Dor em membros inferiores", "Edema de membros inferiores",
+    "Déficit neurológico agudo", "Vertigem", "Cefaleia", "Rebaixamento do nível de consciência",
+    "Agitação psicomotora", "Convulsão", "Síncope", "Trauma"
+]
 
-# --- SEÇÃO 3: ANTECEDENTES COM CHECKLIST ---
-with st.expander("💊 HPP, MUC e Alergias"):
-    hpp_check = st.multiselect("Doenças Prévias (HPP)", 
-        ["HAS", "DM2", "ICC", "DAC (Infarto Prévio)", "Fibrilação Atrial", "DPOC/Asma", "IRC (Diálise)", "AVC Prévio", "Neoplasia"])
-    
-    muc_check = st.multiselect("Medicações em Uso (MUC)",
-        ["Anti-hipertensivos", "Insulina/Antidiabéticos", "Anticoagulante Oral", "Antiagregante (AAS/Clopidogrel)", "Bombinha/Corticoide", "Diuréticos", "Estatina"])
-    
-    alergias_check = st.radio("Alergias?", ["Nega", "Medicamentosa", "Látex", "Contraste Iodado"], horizontal=True)
-    alergia_detalhe = st.text_input("Qual alergia?") if alergias_check != "Nega" else ""
+# Inicializa a queixa na sessão se não existir
+if 'queixa_selecionada' not in st.session_state:
+    st.session_state.queixa_selecionada = None
 
-# --- SEÇÃO 4: SINAIS VITAIS (Valores Numéricos) ---
-with st.expander("📊 Sinais Vitais (SSVV)"):
-    col1, col2 = st.columns(2)
-    fc = col1.text_input("FC (bpm)")
-    sat = col2.text_input("SatO2 (%)")
-    pa = col1.text_input("PA (mmHg)")
-    fr = col2.text_input("FR (irpm)")
-    glicemia = col1.text_input("Glicemia (mg/dL)")
+# Cria um grid de botões (3 colunas)
+cols = st.columns(3)
+for i, q in enumerate(lista_queixas):
+    if cols[i % 3].button(q):
+        st.session_state.queixa_selecionada = q
 
-# --- SEÇÃO 5: EXAME FÍSICO COM CHECKLIST ---
-with st.expander("🩺 Exame Físico (EF)"):
-    tipo_ef = st.radio("Padrão de Exame:", ["Exame Geral", "Paciente Crítico (ABCDE)"], horizontal=True)
+# --- 3. CARACTERÍSTICAS CONDICIONAIS ---
+caracteristicas = []
+if st.session_state.queixa_selecionada:
+    st.info(f"Queixa Selecionada: **{st.session_state.queixa_selecionada}**")
     
-    ef_achados = st.multiselect("Achados Positivos",
-        ["B1 e B2 Bulhas Normofonéticas", "Sopro Cardíaco", "MV Presente e Simétrico", "Estertores Crepitantes", 
-         "Sibilos", "Abdomen Inocente", "Dor à descompressão", "RNC (Rebaixamento)", "Anisocoria", "Pulsos Periféricos Simétricos"])
+    # Dicionário de opções específicas por queixa
+    opcoes_especificas = {
+        "Dor torácica": ["Opressiva", "Pleurítica", "Irradiação MMSS", "Sudorese", "Piora ao esforço"],
+        "Déficit neurológico agudo": ["Hemiparesia", "Afasia", "Desvio de rima", "Início súbito", "Janela < 4.5h"],
+        "Dor abdominal": ["Difusa", "Localizada em FID", "Sinal de Murphy", "Defesa abdominal", "Nauseas/Vomitos"],
+        "Dispneia": ["Uso de musculatura acessória", "Sibilos", "Crepitações", "Ortopneia", "Súbita"],
+        "Trauma": ["Mecanismo de alta energia", "Queda de nível", "Acidente MOT x AUTO", "Trauma craniano"]
+        # Você pode adicionar as outras aqui seguindo o mesmo padrão
+    }
+    
+    # Busca as opções no dicionário (ou usa uma lista padrão se não houver específica ainda)
+    lista_opcoes = opcoes_especificas.get(st.session_state.queixa_selecionada, ["Início súbito", "Sintomas persistentes", "Piora progressiva"])
+    
+    caracteristicas = st.multiselect(f"Características de {st.session_state.queixa_selecionada}:", lista_opcoes)
+    tempo_inicio = st.text_input("Tempo de início da queixa")
 
-# --- SEÇÃO 6: POCUS E ECG COM CHECKLIST ---
-with st.expander("📡 Exames à Beira-Leito"):
-    st.markdown("**POCUS**")
-    pocus_c = st.selectbox("Cardíaco", ["Normal", "Disfunção VE", "Derrame Pericárdico", "VD Dilatado", "VCI Fixa/Dilatada"])
-    pocus_p = st.selectbox("Pulmonar", ["Deslizamento Pleural (+)", "Linhas B (Sindrome Intersticial)", "Derrame Pleural", "Pneumotórax (Lung Point)"])
-    pocus_a = st.selectbox("Abdominal", ["Livre de líquido (FAST -)", "Líquido livre (FAST +)", "Aorta normal"])
+# --- 4. OUTROS CAMPOS (CHECKLISTS RÁPIDOS) ---
+with st.expander("Antecedentes e Sinais Vitais"):
+    hpp = st.multiselect("HPP", ["HAS", "DM2", "ICC", "AVC", "DAC", "IRC", "DPOC"])
+    muc = st.text_input("Medicações em uso")
+    alergias = st.text_input("Alergias", "Nega")
     
-    st.markdown("**ECG**")
-    ecg_check = st.multiselect("Achados ECG", 
-        ["Ritmo Sinusal", "Supra de ST", "Infra de ST", "Inversão de Onda T", "Bloqueio de Ramo", "Taquicardia", "Bradicardia", "Fibrilação Atrial"])
+    c1, c2, c3, c4, c5 = st.columns(5)
+    fc = c1.text_input("FC")
+    sat = c2.text_input("Sat")
+    pa = c3.text_input("PA")
+    fr = c4.text_input("FR")
+    gli = c5.text_input("Glic")
 
-# --- PROCESSAMENTO DO RELATÓRIO ---
-if st.button("GERAR RELATÓRIO FINAL", type="primary"):
-    
-    # Formatação das listas para texto
-    hda_txt = ", ".join(tipo_queixa) + " (" + ", ".join(caract_queixa) + ") " + hda_obs
-    hpp_txt = ", ".join(hpp_check) if hpp_check else "Sem comorbidades relatadas"
-    muc_txt = ", ".join(muc_check) if muc_check else "Nega uso de medicações"
-    ef_txt = ", ".join(ef_achados)
-    ecg_txt = ", ".join(ecg_check)
-    alergia_final = f"{alergias_check}: {alergia_detalhe}" if alergia_detalhe else alergias_check
+with st.expander("Exames Beira-Leito (POCUS/ECG)"):
+    ef_tipo = st.radio("EF:", ["Geral", "Crítico"], horizontal=True)
+    ef_achados = st.text_area("Achados Exame Físico")
+    pocus = st.text_input("POCUS (C/P/A)", "Normal")
+    ecg = st.text_input("ECG", "Ritmo Sinusal")
+
+# --- 5. GERAÇÃO DO TEXTO ESTRUTURADO ---
+if st.button("GERAR RELATÓRIO", type="primary"):
+    # Lógica para compor a HDA incluindo a Origem conforme solicitado
+    hda_composta = f"Paciente admitido via {origem}, com quadro de {st.session_state.queixa_selecionada}. "
+    if caracteristicas:
+        hda_composta += f"Apresenta-se com {', '.join(caracteristicas).lower()}. "
+    hda_composta += f"Início dos sintomas há {tempo_inicio}."
 
     relatorio = f"""## Admissão em Sala de Emergência ##
 
-# ID: {nome}, {idade} anos. Origem: {origem}.
+# ID: {nome}, {idade} anos.
 
-# HDA: {hda_txt}. Início há aproximadamente {tempo_inicio}.
+# HDA: {hda_composta}
 
-# HPP: {hpp_txt}
-
-# MUC: {muc_txt}
-Alergias: {alergia_final}
+# HPP: {', '.join(hpp)}
+# MUC: {muc}
+Alergias: {alergias}
 
 # SSVV:
-- FC: {fc} bpm - SatO2: {sat}% - PA: {pa} - FR: {fr} - Glicemia: {glicemia}
+- FC: {fc} bpm - SatO2: {sat}% - PA: {pa} - FR: {fr} - Glicemia: {gli} mg/dL
 
-# EF ({tipo_ef}):
-{ef_txt}
+# EF ({ef_tipo}):
+{ef_achados}
 
-# POCUS:
-- Cardíaco: {pocus_c} | Pulmonar: {pocus_p}
-- Abdominal: {pocus_a} | MMII/Outros: Normal
-
-# ECG:
-{ecg_txt}
+# POCUS: {pocus}
+# ECG: {ecg}
 """
     st.divider()
-    st.subheader("📋 Texto Pronto para Cópia")
     st.code(relatorio, language=None)
