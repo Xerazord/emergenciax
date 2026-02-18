@@ -160,4 +160,26 @@ elif st.session_state.tipo_ef == "Crítico":
     with st.expander("E - Exposição / Adicional", expanded=True):
         edema = st.radio("Edema MMII:", ["Ausente", "Presente"], horizontal=True)
         cacifo = st.radio("Cacifo:", ["Com cacifo", "Sem cacifo"], horizontal=True) if edema == "Presente" else ""
-        pele_mmii = st.multiselect("Achados:", ["Palidez", "Frialdade", "
+        pele_mmii = st.multiselect("Achados:", ["Palidez", "Frialdade", "Lesões"])
+        e_txt = f"Edema MMII: {edema} {cacifo}. Pele: {', '.join(pele_mmii)}."
+    
+    ef_final_txt = f"-A: {a_txt}\n-B: {b_txt}\n-C: {c_txt}\n-D: {d_txt}\n-E: {e_txt}"
+
+# --- 5. RESULTADO ---
+st.markdown("<div class='section-head'>📋 Registro Final</div>", unsafe_allow_html=True)
+pocus = st.text_input("POCUS")
+ecg = st.text_area("ECG")
+
+if st.button("GERAR RELATÓRIO FINAL"):
+    hda = f"Paciente admitido via {origem}, com quadro de {st.session_state.queixa_sel}. Início há {tempo_inicio}. "
+    if 'caract_selecionadas' in locals() and caract_selecionadas: hda += f"Apresenta {', '.join(caract_selecionadas).lower()}."
+    
+    relatorio = f"""## Admissão em Sala de Emergência ##
+# ID: {nome}, {idade} anos.
+# HDA: {hda}
+# HPP: {', '.join(hpp)} | MUC: {muc} | Alergias: {alergias}
+# SSVV: FC: {fc} | SatO2: {sat} | PA: {pa_v} | FR: {fr} | Glic: {gli}
+# EF ({st.session_state.tipo_ef}):
+{ef_final_txt}
+# POCUS: {pocus} | # ECG: {ecg}"""
+    st.code(relatorio, language=None)
